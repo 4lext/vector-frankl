@@ -1,27 +1,11 @@
 import { z } from 'zod';
 
 const environmentSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z
-    .string()
-    .transform((val) => parseInt(val, 10))
-    .pipe(z.number().positive().max(65535))
-    .default('3000'),
-  API_TIMEOUT: z
-    .string()
-    .transform((val) => parseInt(val, 10))
-    .pipe(z.number().positive())
-    .default('30000'),
-  API_RETRY_ATTEMPTS: z
-    .string()
-    .transform((val) => parseInt(val, 10))
-    .pipe(z.number().positive().max(10))
-    .default('3'),
-  ENABLE_DEBUG_LOGGING: z
-    .string()
-    .transform((val) => val === 'true')
-    .pipe(z.boolean())
-    .default('false'),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
+  PORT: z.coerce.number().int().positive().max(65535).default(3000),
+  API_TIMEOUT: z.coerce.number().int().positive().default(30000),
+  API_RETRY_ATTEMPTS: z.coerce.number().int().positive().max(10).default(3),
+  ENABLE_DEBUG_LOGGING: z.coerce.boolean().default(false),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
@@ -45,8 +29,8 @@ function validateEnvironment(env?: Record<string, string | undefined>): Environm
     return environmentSchema.parse(finalEnv);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessage = error.errors
-        .map((err) => `${err.path.join('.')}: ${err.message}`)
+      const errorMessage = error.issues
+        .map((err: z.ZodIssue) => `${err.path.join('.')}: ${err.message}`)
         .join('\n');
       throw new Error(`Environment validation failed:\n${errorMessage}`);
     }
